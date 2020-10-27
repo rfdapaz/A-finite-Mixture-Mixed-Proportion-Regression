@@ -1,1 +1,1 @@
-# A-finite-Mixture-Mixed-Proportion-Regression-Model
+# Classification Problems in Longitudinal Voting data
