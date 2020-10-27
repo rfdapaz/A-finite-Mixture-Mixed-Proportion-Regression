@@ -75,11 +75,11 @@ update.z <- function(y,X,Z,b,thetamix)
    }
   ######################################################################
 ######################################################################
-############# POSTERIOR PARA  Db ############################
+############# POSTERIOR Db ############################
          
            
  post.Db <- function(b){   
-##### hiperparametro
+##### hyperparameters
  if(npbi==1){
  v=1
  V=1
@@ -101,7 +101,7 @@ update.z <- function(y,X,Z,b,thetamix)
      
        
        
-  ######################################################
+######################################################
 #####
 ######################################################
 
@@ -149,7 +149,7 @@ update.bis=function(y,X,Zi,bi,theta,Db){
 
     
 ##============================================================
-############### DECLARA??ES  dos dados por componente
+############### Components
 #####################################################
 ind=c(t(matrix(rep(seq(1:m),Tp),m,Tp)) )
 p=length(X[1,])     # numero de coeficientes fixos por componente
@@ -158,11 +158,11 @@ np=p+1            # total de coeficientes por componente
 npbi=length(Z1[1,])
 h=np+1
 ###=============================================================
-########## hiperparametros fixos
+########## huperparameter fixed
  delta=1
  
 #############################################
-##########VALORES INICIAIS
+########## initials values
 mu=rep(0,npbi) 
 Sigmab=diag(length(mu))
 b=mvrnorm(m, mu, Sigmab)
@@ -182,9 +182,9 @@ Db=Sigmab
 v=list(z=z,thetamix=thetamix,b=b,nz=nz,Db=Db)
  
 
-Vbi=0.3# controle de aceita??o gibbis coeficientes
-Wb=0.2 # controle taxa de aceita??o gibbis intercepotos aleat?rios
-nit=30000
+Vbi=0.3# variance of proposal function
+Wb=0.2 # variance of proposal function
+nit=20000
  
 
 cat( file="theta", append=FALSE);
