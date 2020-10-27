@@ -143,7 +143,7 @@ D=diag(diag(Db))
 C=(Db-D)+diag(rep(1,J)) ##corelation matrix
 tau=diag(sqrt(diag(Db))) ## standart deviation matrix
 
-L=chol(C)  ### matriz de cholesky para correlação
+L=chol(C)  ### matriz de cholesky para correlaÃ§Ã£o
 A=(tau)%*%(L)
 
 z=rnorm(J)
