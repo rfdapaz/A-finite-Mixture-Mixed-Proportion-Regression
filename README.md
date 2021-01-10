@@ -25,4 +25,4 @@ if(!require(LaplacesDemon)) install.packages("LaplacesDemon");require(LaplacesDe
 
 The codes and results can be found in the follow links:
 
-* [Simulated data from a mixture of regression model with two components](https://beta.rstudioconnect.com/content/15931)
+* [Simulated data from a mixture of regression model with two components](https://beta.rstudioconnect.com/content/15932)
