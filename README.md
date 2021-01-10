@@ -1,7 +1,7 @@
 # A finite Mixture Mixed Proportion Regression Model for Classification Problems in Longitudinal Voting data
 
 The aim of this work is to present the scripts for implement the methodology presented in the manuscript: A finite Mixture Mixed Proportion Regression Model for Classification Problems in Longitudinal Voting data.
-This work is the result of a partnership between the Federal University of Ceará ( Laboratory of Innovative Technologies from portuguese, LTI, <https://dmontier.pro.br/lti/>), Instituto de Ciências Matemáticas e de Computação, Universidade de São Paulo, both in Brazil, and University of Connecticut, Storrs, USA.
+This work is the result of a partnership between the Federal University of Ceará ( Laboratory of Innovative Technologies from portuguese, [LTI](https://dmontier.pro.br/lti/), Instituto de Ciências Matemáticas e de Computação, Universidade de São Paulo, both in Brazil, and University of Connecticut, Storrs, USA.
 
 
 Autors: Rosineide da Paz, Jorge Luis Bazán, Victor Hugo Lachos and Dipak Dey
@@ -24,3 +24,4 @@ if(!require(LaplacesDemon)) install.packages("LaplacesDemon");require(LaplacesDe
 ```
 
 
+[Simulated data from a mixture of regression model with two components](https://beta.rstudioconnect.com/content/15931)
