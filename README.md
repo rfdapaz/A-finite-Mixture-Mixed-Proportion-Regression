@@ -10,8 +10,7 @@ Autors: Rosineide da Paz, Jorge Luis Bazán, Victor Hugo Lachos and Dipak Dey
 The methodology is implemented in real and simulated data set. Here we present the code for simulate the data used in the manuscript.
 
 
-### Packages requerid for simulation
-
+### Packages requerid  for all analises
 
 ```{r include=FALSE}
 if(!require(truncnorm)) install.packages("truncnorm");require(truncnorm) 
