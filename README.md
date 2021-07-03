@@ -13,4 +13,4 @@ The methodology is implemented in real and simulated data set. Here we present t
 
 The codes and results can be found in the follow links:
 
-* [Simulated data from a mixture of regression model with two components](https://beta.rstudioconnect.com/content/d0e77eea-0a9f-4203-a2a6-e06379dafdd3)
+* [Fitting the model in simulated data from a mixture of regression model with two components](https://beta.rstudioconnect.com/content/d0e77eea-0a9f-4203-a2a6-e06379dafdd3)
