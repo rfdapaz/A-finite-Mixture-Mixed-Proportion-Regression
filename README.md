@@ -10,19 +10,7 @@ Autors: Rosineide da Paz, Jorge Luis Bazán, Victor Hugo Lachos and Dipak Dey
 The methodology is implemented in real and simulated data set. Here we present the code for simulate the data used in the manuscript.
 
 
-### Packages requerid  for all analises
-
-```{r include=FALSE}
-if(!require(truncnorm)) install.packages("truncnorm");require(truncnorm) 
-if(!require(MASS)) install.packages("MASS");require(MASS) 
-if(!require(llogistic)) install.packages("llogistic");require(llogistic) 
-if(!require(MCMCpack)) install.packages("MCMCpack");require(MCMCpack) 
-if(!require(mvtnorm)) install.packages("mvtnorm");require(mvtnorm)
-if(!require(LaplacesDemon)) install.packages("LaplacesDemon");require(LaplacesDemon)
-
-```
-
 
 The codes and results can be found in the follow links:
 
-* [Simulated data from a mixture of regression model with two components](https://beta.rstudioconnect.com/content/15932)
+* [Simulated data from a mixture of regression model with two components](https://beta.rstudioconnect.com/content/d0e77eea-0a9f-4203-a2a6-e06379dafdd3)
