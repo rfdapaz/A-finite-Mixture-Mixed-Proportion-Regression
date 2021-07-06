@@ -7,7 +7,7 @@ This work is the result of a partnership between the Federal University of Cear√
 Autors: Rosineide da Paz, Jorge Luis Baz√°n, Victor Hugo Lachos and Dipak Dey
 
 
-The methodology is implemented in real and simulated data set. Here we present the code for simulate the data used in the manuscript.
+The methodology is implemented in real and simulated data set. Here we present the code for simulate the data used in the manuscript, and the code used to fit the regression model.
 
 
 
