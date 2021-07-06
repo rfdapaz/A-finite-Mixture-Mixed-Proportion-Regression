@@ -1,0 +1,973 @@
+
+---
+title: 'A finite Mixture Mixed Proportion Regression Model for Classification Problems in Longitudinal Voting data'
+Autor: ' '
+output:
+  html_document:
+    df_print: paged
+---
+
+
+
+The aim of this work is to present the scripts for implement the methodology presented in the manuscript: A finite Mixture Mixed Proportion Regression Model for Classification Problems in Longitudinal Voting data.
+This work is the result of a partnership between the Federal University of Ceará ( Laboratory of Innovative Technologies from portuguese, [LTI](https://dmontier.pro.br/lti/), Instituto de Ciências Matemáticas e de Computação, Universidade de São Paulo, both in Brazil, and University of Connecticut, Storrs, USA.
+
+
+Autors: Rosineide da Paz, Jorge Luis Bazán, Victor Hugo Lachos and Dipak Dey
+
+
+The methodology is implemented in real and simulated data set. Here we present the code used to analyze the simulate data by  the model presented in the manuscript.
+ 
+
+\ 
+
+
+### Packages required for all analyzes
+
+
+```{r warning=FALSE, include=FALSE }
+if(!require(truncnorm)) install.packages("truncnorm");require(truncnorm) 
+if(!require(MASS)) install.packages("MASS");require(MASS) 
+if(!require(llogistic)) install.packages("llogistic");require(llogistic) 
+if(!require(MCMCpack)) install.packages("MCMCpack");require(MCMCpack) 
+if(!require(mvtnorm)) install.packages("mvtnorm");require(mvtnorm)
+if(!require(knitr)) install.packages("knitr");require(knitr) 
+if(!require(LaplacesDemon)) install.packages("LaplacesDemon");require(LaplacesDemon)
+if(!require(ggplot2)) install.packages("ggplot2");require(ggplot2)
+library(kableExtra)
+if(!require(tidyr)) install.packages("tidyr");require(tidyr)
+ 
+```
+
+
+```{r}
+if(!require(truncnorm)) install.packages("truncnorm");require(truncnorm) 
+if(!require(MASS)) install.packages("MASS");require(MASS) 
+if(!require(llogistic)) install.packages("llogistic");require(llogistic) 
+if(!require(MCMCpack)) install.packages("MCMCpack");require(MCMCpack) 
+if(!require(mvtnorm)) install.packages("mvtnorm");require(mvtnorm)
+if(!require(LaplacesDemon)) install.packages("LaplacesDemon");require(LaplacesDemon)
+if(!require(knitr)) install.packages("knitr");require(knitr) 
+if(!require(kableExtra)) install.packages("kableExtra");require(kableExtra) 
+if(!require(ggplot2)) install.packages("ggplot2");require(ggplot2)
+if(!require(tidyr)) install.packages("tidyr");require(tidyr)
+```
+
+
+```{r include=FALSE}
+setwd("G:/Drives compartilhados/0 Trabalhos_prioritarios/Mixture_LLogistic_corrigir_resubmeter/Julho_2021")
+```
+
+\ 
+
+
+##  Simulated data from a mixture of regression model with two components
+
+
+
+```{r}
+m=100         # number of individuals 
+Tp=5          # number of replication for each unit sample  
+ind = sort(rep(rep(1:m),Tp))  ## identification for each individual
+n=m*Tp        # total of observations
+k=2           # number of component in the mixture
+grau=2        # degree of polynomial used in the analysis
+pcov=grau+1   # number of parameter for fix effect
+qcov=grau+1   # number of parameter for random effect
+seed=2005  # seed used in the simulation
+w=c(0.4,0.6)  # Mixture weights for two components
+```
+
+
+
+
+
+
+
+```{r eval=FALSE, include=FALSE}
+
+forpoly=rnorm(10)
+
+forpoly=c(forpoly,10)
+
+model.matrix(~poly(forpoly, degree=grau))
+
+
+```
+
+\ 
+
+
+
+###  Taking orthogonal polynomial for model matrix (X)
+
+```{r}
+Vt=rep(1:Tp,m)
+X=model.matrix(~poly(Vt, degree=grau))
+cc=ncol(X)
+X=matrix(X,n,cc)
+```
+
+
+\ 
+
+
+###  Explanatory variable for random-effects
+
+```{r}
+Zi=X[1:Tp,]
+Xi=X[1:Tp,]
+Z=diag(m)%x%Zi # diag block matrix
+
+```
+
+
+\ 
+
+
+### Function for simulating indicator variables from a discrete distribution
+
+```{r}
+rDiscreta<-function(p){
+ u=runif(1)
+ P=cumsum(p)
+ val=sum(P<u)+1
+ val}
+#
+set.seed(seed)
+pgrupos=w
+s.ver=numeric(m)
+indiv=NULL
+Y=NULL
+for (i in 1:m){
+	s.ver[i]=rDiscreta(pgrupos)
+}
+```
+
+\ 
+
+
+
+### Regression coefficints for  fixed-effect 
+
+
+```{r}
+t_index=rep(seq(1:Tp),m)
+           
+
+set.seed(seed)
+btamix=rbind( c( 1.20, 3.5,  3.8,  2.50),
+              c( -0.5, -6.5, -5.5, 2.2))  
+              
+              
+ betamix=cbind(btamix[,1:cc],btamix[,length(btamix[1,])]         )  
+ thetamix=cbind(btamix[1:k,],w)         
+ s=c(t(matrix(rep(s.ver,Tp),m,Tp)) )        
+ betamix=betamix[s,]
+ ind=c(t(matrix(rep(seq(1:m),Tp),m,Tp)) )   
+
+
+```
+
+
+\ 
+
+
+
+
+### Simulating random-effects from a multinormal distribution
+
+
+
+```{r}
+npbi=ncol(Zi)
+mu_zeros=rep(0,npbi) 
+set.seed(seed)
+Sigmab=solve(diag(length(mu_zeros))+2*runif(npbi))
+b_w_real=t(mvrnorm(m, mu_zeros, Sigmab))
+b_l_real=c(b_w_real)
+```
+
+
+
+\ 
+
+
+
+
+
+
+
+### Genarating a mixed mixture regression  with 2 components
+
+```{r}
+
+
+#########################################################
+################ generated mixture  #####################
+#########################################################
+
+
+y_sim = numeric()
+for(i in 1:n){
+eta=X[i,]%*%betamix[i,1:pcov]+Z[i,]%*%as.matrix(b_l_real)    ### preditor linear do modelo misto para o individuo i
+med=exp(eta)/(1+exp(eta))
+ph=exp(betamix[i,(pcov+1)])
+y=rllogistic(1 , med, ph)     #### amsotra gerada sem mistura
+y_sim=rbind(y_sim,y)
+}   
+
+par(mfrow=c(1,2))
+y = y_sim
+y_sim=t(matrix(y,Tp,m))
+ ano=c(1,2,3,4,5)
+plot(ano,y_sim[1,], type="l",ylim=c(0,1),main="Real Classification", ylab=" Proportion",
+ xlab="Point at time",xaxt='n')
+for(i in 2:m){
+lines(ano,y_sim[i,],col=s.ver[i], type="o",  lty=s.ver[i])
+
+}
+axis(1, at=ano,labels=ano, col.axis="black", las=1)
+
+ 
+y_w = y_sim
+
+```
+
+
+
+
+
+
+
+\ 
+
+
+\ 
+
+
+
+
+
+
+
+
+
+## Fitting the Mixed Mixture of L-Logistic Regression Model
+
+
+\ 
+
+
+### Function to updating the size of groups
+
+```{r}
+update_ns = function(s)
+{
+  ns=rep(0,k)
+  for(i in 1:k) ns[i] = sum(s==i)
+  return(ns)
+}
+
+```
+
+
+\ 
+
+
+
+### Function for updating  the indicator variables
+
+
+```{r}
+
+update_s = function(y,X,Z,b,thetamix)
+{
+  s.new = rep(0,m)
+  prob=numeric()
+  for(i in 1:m){
+    idd=which(ind==i)
+    for(j in 1:k){
+      et=X[idd,]%*%thetamix[j,1:p]+as.numeric(Z[idd,]%*%b) 
+      med=exp(et)/(1+exp(et))
+      sigm=exp(thetamix[j,np])
+      prob[j]=exp(log(thetamix[j,h])+sum(dllogistic( y[ind==i],med,sigm,log=TRUE)) ) 
+    }
+    
+    probs=prob/sum(prob)
+    s.new[i]=sample(1:k,1,prob=probs)
+    if(max(s.new)!=k){id=sample(1:m,1,prob=rep(1/m,m)); s.new[id]=k}
+  }
+  return(s.new)
+}
+
+
+```
+
+\ 
+
+
+
+###  The conditional augmented Log-Likelihood function  
+
+The Log-Likelihood given the indicator variable S.
+
+```{r}
+
+Loglink = function(y,X,Z,b,bta){
+  eta=X%*%bta[1:p]+Z%*%b 
+  med=c(exp(eta)/(1+exp(eta)))
+  phi=exp(bta[np])
+  som=sum(dllogistic(y,med,phi, log= TRUE))
+  return(som)
+}
+      
+```
+
+
+\ 
+
+
+
+###  R functions for updating the fixed coefficients and precision for each component in the mixture 
+
+```{r}
+
+###############################################                                  
+############# POSTERIOR for coefficients #######  
+############################################## 
+
+post_betas <- function(y,X,Z,b,bta){  
+  Loglink(y,X,Z,b,bta)+sum(dnorm(bta[1:np],0,100,log=TRUE)) 
+}
+
+#############################################         
+####### METROPOLIS-Hastings  #################
+############################################# 
+
+update_betas=function(y,X,Z,b,bta){
+  
+  for(l in 1:np){
+    btan=bta
+    btan[l]=rnorm(1, mean = bta[l],Wb)
+    fnew=post_betas(y,X,Z,b,btan)
+    fold=post_betas(y,X,Z,b,bta)
+    wp=min(1,exp(fnew - fold));
+    u=runif(1)   
+    if(u< wp){bta[l]=btan[l]}
+  } 
+  
+  
+  return(bta)
+}
+
+
+```
+
+
+\ 
+
+
+
+###  R functions for updating the  random-effects for global model
+
+
+```{r}
+
+######################################################
+##### Posterior for random-effects bi's ###############
+######################################################
+
+
+post_bi <- function(yi,Xi,Zi,bta,bi,Db){
+  eta=Xi%*%bta[1:p]+Zi%*%bi 
+  med=c(exp(eta)/(1+exp(eta)))
+  phi=exp(bta[np])
+  L=sum(dllogistic(yi,med,phi, log= TRUE))
+  mu=rep(0,npbi) 
+  if(length(mu)==1){
+    Pbi=sum(dnorm(bi, mu, Db, log=TRUE) )
+  }else{Pbi=dmvnorm(bi, mu, Db, log=TRUE) } 
+  post=L+Pbi 
+  return(post)    
+}
+
+
+
+######################################################
+#######   Metropolis-Hastings for updating bi's #######
+######################################################                      
+
+
+
+
+update_bis=function(y,X,Zi,bi,theta,Db){
+  mi=bi
+  Sigmab=diag(Vbi,length(mi),length(mi))
+  mi=mvrnorm(1, bi, Sigmab) 
+  fnew=post_bi(y,X,Zi,theta,mi,Db)
+  fold=post_bi(y,X,Zi,theta,bi,Db)
+  wp=min(1,exp(fnew - fold))
+  u=runif(1)
+  if(u< wp){bi=mi}
+  return(bi)
+}
+
+
+```
+
+\ 
+
+
+
+###  R functions for updating the random-effect covariance matrix
+
+
+```{r}
+
+
+###############################################################
+########## Posterior for cov-matrix of b #######################
+###############################################################         
+
+post_Db <- function(b){   
+  if(npbi==1){
+    v=1
+    V=1
+    MM=rgamma(1, (m+v)/2,rate=(sum(b^2)+V)/2)
+    post=sqrt(1/MM)
+    return(post)  }else{ 
+      bl=t(matrix(b,npbi,m))
+      del=200
+      grl=m+del
+      Sb=solve(diag(npbi)*rep(100,npbi)+ t(bl)%*%(bl))
+      MM=   rWishart( 1,grl, Sb) 
+      MM= matrix(MM,npbi,npbi)
+      post=(MM)
+      return(post) 
+    }
+}
+
+
+```
+
+
+
+\ 
+
+
+
+
+
+
+
+### Hyperparameters for Dirichlet prior
+
+```{r}
+nu = rep(1,k)
+```
+
+
+
+\ 
+
+
+
+## Initial values and additional information for the model
+
+```{r warning=FALSE}
+
+##============================================================
+############### Declarations for algorithm
+#####################################################
+ind = c(t(matrix(rep(seq(1:m),Tp),m,Tp)) )
+p = length(X[1,])   # number of the coefficients in each component
+np = p+1            # total of the coefficients in each component
+h = np+1
+###=============================================================
+
+
+
+#############################################
+########## Initial values
+#############################################
+mu_zeros = rep(0,npbi)  
+Db = diag(length(mu_zeros))
+set.seed(seed)
+b_w = mvrnorm(m, mu_zeros, Db)
+b = c(t(b_w))
+
+set.seed(seed)
+#initial values for the parameter of the components
+thetamix = cbind(matrix(rep(runif(1),np*k),k,np),rep(1/k,k)) 
+
+#initial values for the indicator variable
+S_init = numeric() 
+for (i in 1:m){
+  S_init[i] = rDiscreta(rep(1/k,k))
+}
+s = S_init
+
+#initial values for the number of elements in each component
+ns = update_ns(s)
+
+#############################################
+########## Declarations ######################
+#############################################
+
+#to store the results without initial values
+Samp = list(beta=NULL,delta=NULL,omega=NULL,B=NULL,S=NULL,D=NULL,Loglink=NULL )
+
+
+Vbi = 0.3 #initial variance of proposal function for updating random-effects
+Wb = 0.2  #initial variance of proposal function for updating fixed-effects
+
+nit = 250000  #total number of iterations for the algorithm to achieve convergence
+
+r = 0 #starting or while function
+
+```
+
+
+
+\ 
+
+
+
+
+### Updating the parameters
+
+
+```{r   results='hide'}
+########################################
+########## Algorithm  ###################
+#######################################
+
+while(r <= nit){  
+  r = r + 1
+  s = update_s(y,X,Z, b, thetamix)
+  ns = update_ns(s)
+  thetamix[,h] = rdirichlet(1,nu+ ns)
+  
+  s_l = c(t(matrix(rep(s,Tp),m,Tp)) )
+  
+  for(j in 1:k){
+    id = which(s_l==j)
+    bta = thetamix[j,1:np]
+    yj = y[id]
+    Xj = X[id,]
+    Vj = Z[id,]
+    thetamix[j,1:np] = update_betas(yj,Xj,Vj, b,bta)
+  }
+  
+  Db = post_Db(b)
+  
+  b_w = t(matrix(b,npbi,m))
+  
+  for(i in 1:m) {
+    bi = b_w[i,]
+    ym = y[ind==i]
+    b_w[i,] = update_bis(ym,Xi,Zi,bi,  thetamix[ s[i],1:np], Db)
+  }
+  b = c(t(b_w))
+  
+  
+  if(r==100){Wb=0.01;Vbi=0.01} ## for increase the acceptance rate     
+   print(thetamix)
+   print(Db)
+   print(r)
+  # 
+  L = 0
+  for(i in 1:m){
+    dk = 0
+    for(j in 1:k){ 
+      bta = thetamix[j,] 
+      me = Xi%*%c(bta[1:p]) + Zi%*%c(b_w[i,]) 
+      med_r = exp(me)/(1+exp(me))
+      phi_r = exp(bta[np])
+      dencomp = log(bta[h]) + sum(dllogistic(y_w[i,],med_r,phi_r,  log= TRUE))
+      dk = dk + dencomp
+    }
+    L = L + dk
+  }
+  
+  Samp[["beta"]] = rbind(Samp[["beta"]],c(thetamix[,1:pcov]))
+  Samp[["delta"]] = rbind(Samp[["delta"]],c(thetamix[,np]))
+  Samp[["omega"]] = rbind(Samp[["omega"]],c(thetamix[,h]))
+  Samp[["B"]] = rbind(Samp[["B"]],c(b_w))
+  Samp[["S"]] = rbind(Samp[["S"]],c(s))
+  Samp[["D"]] = rbind(Samp[["D"]],c(Db))
+  Samp[["Loglink"]] = c(Samp[["Loglink"]],c(L))
+}
+
+```
+
+
+
+
+\ 
+
+
+## Acceptance rates of the Metropolis-Hasting
+
+\ 
+
+
+### Coefficients and precision for each component
+
+```{r}
+
+nburn = 50000
+
+burn=1:nburn ## burning period without thin
+
+Betas = Samp[["beta"]][-burn,]
+Deltas = Samp[["delta"]][-burn,]
+Omegas = Samp[["omega"]][-burn,]
+
+
+Chains=cbind(Betas,Deltas,Omegas)
+
+
+rate = numeric()
+ for(t in 1:(ncol(Chains)-2)){rate[t] = round(length(unique(Chains[,t]))/nrow(Chains),3)}
+
+ rate1 = rate[seq(2,length(rate),k)]
+ rate2 = rate[seq(1,length(rate),k)]
+ 
+rate_tt = rbind(as.numeric(rate1),c(rate2))
+rate_tt = cbind(c(1,2),rate_tt)
+ 
+kbl(rate_tt, format = "html",
+        table.attr = "style='width:30%;'",
+      booktabs = T,
+        caption = "<center><strong>Acceptance rates for fixed coefficients and precisions.</strong></center>", 
+        col.names =  c("Component (c)","$\\beta_{0c}$","$\\beta_{1c}$","$\\beta_{2c}$","$\\delta_{c}$"),
+      align = "ccccc"
+      ) %>% 
+  kableExtra::kable_classic(full_width = F, html_font = "Cambria",font_size = 25)
+
+
+
+
+```
+
+
+
+\ 
+
+
+### Random-effects
+
+
+
+
+```{r fig.height=2.2, fig.width=5.5,fig.align='center'}
+
+B = Samp[["B"]][-burn,] 
+
+rate = numeric()
+ for(t in 1:100){rate[t] = round(length(unique(B[,t]))/nrow(B),3)}
+
+dat = data.frame(Index=1:m,Rate=rate)
+ggplot(data = dat, aes(x = Index, y = Rate)) +
+   geom_point(color="black")+ 
+      labs(title=paste("Acceptance rates for random-effect"), y="Rate", x="Individual", caption="The multi-normal distribution   is used as  propostal distribution.")+ theme_bw()
+   
+
+```
+
+
+\ 
+
+
+
+
+
+
+
+
+
+## Checking the convergence of the chain using the log-likelihood
+
+```{r include=FALSE}
+if(!require(coda)) install.packages("coda");require(coda) 
+```
+
+
+
+
+```{r}
+if(!require(coda)) install.packages("coda");require(coda) 
+```
+
+
+
+
+
+\ 
+
+
+### The convergence of the chain 
+
+This  is checked for all parameters in the same time using the log-likelihood.
+
+
+
+```{r fig.align='center'}
+L=Samp[["Loglink"]][-burn]
+N = length(L)
+jump=seq(1,N,5)
+L = L[jump]
+
+log_v<-mcmc(L)
+geweke.diag(log_v)
+plot(log_v,type='l')
+```
+
+
+```{r eval=FALSE, include=FALSE}
+effectiveSize(log_v)/length(L)
+```
+
+
+
+
+```{r fig.align='center'}
+
+
+
+Theta=cbind(Betas[jump,],Deltas[jump,])
+GEW = numeric()
+for(i in 1:ncol(Theta)){
+log_v<-mcmc(Theta[,i])
+effectiveSize(log_v)
+GEW[i] = geweke.diag(log_v)[[1]]
+}
+
+
+GEW =as.numeric(GEW)
+
+ Gw1 = GEW[seq(2,length(GEW),k)]
+ Gw2 = GEW[seq(1,length(GEW),k)]
+ 
+GW = rbind(as.numeric(Gw1),c(Gw2))
+TGW = cbind(c(1,2),GW)
+ 
+kbl(TGW, format = "html",
+        table.attr = "style='width:30%;'",
+      booktabs = T,
+        caption = "<center><strong>Geweke's statistics for the parameter sample of the componets.</strong></center>",  
+        col.names =  c("Component (c)","$\\beta_{0c}$","$\\beta_{1c}$","$\\beta_{2c}$","$\\delta_{c}$"),
+      align = "ccccc"
+      ) %>% 
+  kableExtra::kable_classic(full_width = F, html_font = "Cambria",font_size = 25)
+
+
+
+
+```
+
+
+
+
+```{r fig.height=4, fig.width=7, fig.align='center'}
+
+Theta=cbind(Betas[jump,],Deltas[jump,])
+lab = c(expression(beta[0]), expression(beta[1]),expression(beta[2]),expression(delta))
+nj = (ncol(Theta))
+
+c1 = seq(2, nj ,k)
+c2 = seq(1, nj ,k)
+pl=list()
+for(i in 1:length(c1)){
+
+
+  
+  result2=data.frame(C1=Theta[,c1[i]],C2=Theta[,c2[i]],Index=1:nrow(Theta))
+
+  
+     df.wide.time <- data.frame(result2)
+  labs=names(df.wide.time)
+  df.long.test <- df.wide.time %>%
+  #  select(labs) %>%
+    gather(key = "Component", value = "value", -Index)
+ 
+  dta=rbind(df.long.test)
+
+   # Multiple line in plot
+ pl[[i]] = ggplot(dta, aes(x = Index, y = value)) + 
+    geom_line(alpha = 0.3,aes(color = Component), size = 1) + theme_minimal()+
+    labs(y=lab[i], subtitle=  " " ,  caption= " ") + 
+    theme(axis.text.x = element_text( angle=0),
+          axis.text.y = element_text(angle=45))
+
+   
+  
+}
+
+
+
+```
+
+
+
+
+```{r echo=FALSE, fig.align='center', fig.height=4, fig.width=10, message=FALSE, warning=FALSE}
+
+ # grid.arrange(ss,sy,ss1,sy1,ss2,sy2,ss3,sy3,ss4,sy4,ss5,sy5,ss6,sy6, ss7,sy7,ncol=2, nrow =8)
+ gridExtra::grid.arrange(top = paste("Trace plots for fixed coefficient and precision parameters"), grobs = pl,ncol= 2 , nrow = 2)
+ 
+ 
+```
+
+\ 
+
+
+
+## Summary of the samples for components
+
+```{r fig.align='center'}
+
+
+R=Chains
+Est=numeric()
+for(i in 1:ncol(R)){
+  vetor=pp<-matrix(R[,i])
+  vetor <- mcmc(vetor)
+  hpd=HPDinterval(vetor,prob=0.95)
+  inter1=round(hpd[1],3)
+   inter2=round(hpd[2],3)
+  est=c(round(mean(R[,i]),3),inter1,inter2)
+  Est=rbind(Est,est)
+}
+
+
+labb =  c("$\\beta_{0c}$","$\\beta_{1c}$","$\\beta_{2c}$","$\\delta_{c}$","$\\omega_{c}$")
+
+ Est1 = Est[seq(2,nrow(Est),k),]
+ Est2 = Est[seq(1,nrow(Est),k),]
+ 
+Est = data.frame(cbind(labb,Est1,Est2))
+
+row.names(Est) = 1:5
+
+
+ 
+kbl(Est, format = "html",
+        table.attr = "style='width:30%;'",
+      booktabs = T,
+        caption = "<center><strong>The estimated parameters, and 95% HPD interval.</strong></center>", 
+        col.names =  c("Parameter","Mean", "Lower", "Upper","Mean", "Lower", "Upper"),
+    font_size = 30,
+        align = "ccccccc"
+      ) %>% 
+  kableExtra::kable_classic(full_width = F,html_font = "Cambria",font_size = 25)
+
+
+
+
+
+
+```
+
+
+\ 
+
+
+
+## Classification
+
+\ 
+
+
+#### Taking the posterior mode and reordering the estimated labels
+```{r}
+S =  Samp[["S"]][-burn,]
+
+s_est = numeric()
+
+for(i in 1:m){
+ s_est[i] = as.numeric(names(table(S[,i]))[table(S[,i])==max(table(S[,i]))])
+}
+
+s_ord = s_est
+
+s_ord[s_est==1] = 2 
+s_ord[s_est==2] = 1 
+
+
+```
+
+\ 
+
+
+
+#### Confusion matrix 
+
+```{r fig.align='center'}
+
+Confusion = table(s.ver,s_ord)
+
+ Confusion = cbind(c("Component 1", "Component 2"),Confusion)
+ 
+ 
+kbl(Confusion, format = "html",
+        table.attr = "style='width:30%;'",
+      booktabs = T,
+        caption = "<center><strong>Confusion matrix.</strong></center>",
+    col.names =  c("Real/Estimated","Component 1","Component 2"),
+         align = "cccc"
+      ) %>% 
+  kableExtra::kable_classic(full_width = F, html_font = "Cambria",font_size = 30)
+
+
+
+```
+
+\ 
+
+
+
+
+### Visualization for the profile in the real and estiated classification
+
+```{r fig.align='center'}
+
+par(mfrow=c(1,2))
+
+y_sim=t(matrix(y,Tp,m))
+ ano=c(1,2,3,4,5)
+plot(ano,y_sim[1,], type="l",ylim=c(0,1),main="Real Classification", ylab=" Proportion",
+ xlab="Point at time",xaxt='n')
+for(i in 2:m){
+lines(ano,y_sim[i,],col=s.ver[i], type="o",  lty=s.ver[i])
+
+}
+axis(1, at=ano,labels=ano, col.axis="black", las=1)
+
+
+ ano=c(1,2,3,4,5)
+plot(ano,y_sim[1,], type="l",ylim=c(0,1),main="Estimated Classification", ylab=" Proportion",
+ xlab="Point at time",xaxt='n')
+for(i in 2:m){
+lines(ano,y_sim[i,],col=s_ord[i], type="o",  lty=s_ord[i])
+
+}
+axis(1, at=ano,labels=ano, col.axis="black", las=1)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
